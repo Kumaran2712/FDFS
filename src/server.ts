@@ -53,7 +53,7 @@ const server = http.createServer((req,res)=>{
                 (b)=> b.showId===booking.showId && b.seat===booking.seat)
             if(taken){
                 res.writeHead(409,{ "Content-Type": "application/json" });
-                res.end(JSON.stringify("Seat is already taken"));
+                res.end(JSON.stringify({ error: "Seat is already taken" }));
                 return;
             }
             bookings.push(booking);
