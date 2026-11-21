@@ -7,6 +7,8 @@ const shows = [
     { id: 2, movie: "Thalaivar 175", time: "09:00", totalSeats: 300 },
   ];
 
+  const bookings: { showId: number; seat: string }[] = [];
+
 
 
 const server = http.createServer((req,res)=>{
@@ -20,7 +22,39 @@ const server = http.createServer((req,res)=>{
 
     if(req.method==="GET" && req.url==="/shows"){
         res.writeHead(200,{"Content-Type": "application/json" });
-        res.end(JSON.stringify(shows))
+        res.end(JSON.stringify(shows));
+        return;
+    }
+
+    if (req.method === "GET" && req.url === "/bookings") {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(bookings));
+        return;
+      }
+
+    if(req.method==="POST" && req.url==="/bookings"){
+        let body = "";
+        req.on("data", (chunk)=>{
+            body += chunk;
+        })
+
+        req.on("end", ()=>{
+            let data;
+            try{
+                data = JSON.parse(body);
+            }catch{
+                res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Invalid JSON" }));
+        return;
+            }
+           
+            const booking = { showId: data.showId, seat: data.seat };
+            bookings.push(booking);
+            res.writeHead(201,{ "Content-Type": "application/json" });
+            res.end(JSON.stringify(booking));
+            
+        })
+
         return;
     }
 
