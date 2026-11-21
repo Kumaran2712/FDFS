@@ -7,11 +7,11 @@ const shows = [
     { id: 2, movie: "Thalaivar 175", time: "09:00", totalSeats: 300 },
   ];
 
-  const bookings: { showId: number; seat: string }[] = [];
-  const takenSeats = new Set<string>();
+  const bookings = new Map<string, { showId: number; seat: string }>();
 
   const ROWS = "ABCDEFGHIJKLMNO";
 const SEATS_PER_ROW = 20;
+type Seat = { seat: string; booked: boolean };
 
 function isValidSeat(seat: string): boolean {
   const row = seat[0];
@@ -22,6 +22,7 @@ function isValidSeat(seat: string): boolean {
 
 
 const server = http.createServer((req,res)=>{
+    const parts = req.url.split('/');
     console.log(`${req.method} ${req.url}`);
 
     if(req.method ==="GET" && req.url==="/"){
@@ -38,7 +39,7 @@ const server = http.createServer((req,res)=>{
 
     if (req.method === "GET" && req.url === "/bookings") {
         res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify(bookings));
+        res.end(JSON.stringify([...bookings.values()]));
         return;
       }
 
@@ -72,15 +73,12 @@ const server = http.createServer((req,res)=>{
            
             const booking = { showId: data.showId, seat: data.seat };
             const key = `${booking.showId}-${booking.seat}`;
-            if (takenSeats.has(key)) {
+            if (bookings.has(key)) {
                 res.writeHead(409, { "Content-Type": "application/json" });
                 res.end(JSON.stringify({ error: "Seat already booked" }));
                 return;
               }
-        
-              takenSeats.add(key);
-            
-            bookings.push(booking);
+              bookings.set(key, booking);
             res.writeHead(201,{ "Content-Type": "application/json" });
             res.end(JSON.stringify(booking));
             
@@ -89,6 +87,32 @@ const server = http.createServer((req,res)=>{
         return;
     }
 
+    if (req.method === "GET" && parts.length === 4 && parts[1] === "shows" && parts[3] === "seats") {
+        const showId = Number(parts[2]);
+    
+        if (!shows.some((s) => s.id === showId)) {
+          res.writeHead(404, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Unknown show" }));
+          return;
+        }
+    
+        const seatMap:Seat[][] = [];
+    
+        for (const row of ROWS) {
+          const rowSeats:Seat[] = [];
+    
+          for (let num = 1; num <= SEATS_PER_ROW; num++) {
+            const seat = `${row}${num}`;
+            rowSeats.push({ seat: seat, booked: bookings.has(`${showId}-${seat}`) });
+          }
+    
+          seatMap.push(rowSeats);
+        }
+    
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify(seatMap));
+        return;
+      }   
     res.writeHead(404, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ error: "Not found" }));
     
