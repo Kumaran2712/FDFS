@@ -8,6 +8,16 @@ const shows = [
   ];
 
   const bookings: { showId: number; seat: string }[] = [];
+  const takenSeats = new Set<string>();
+
+  const ROWS = "ABCDEFGHIJKLMNO";
+const SEATS_PER_ROW = 20;
+
+function isValidSeat(seat: string): boolean {
+  const row = seat[0];
+  const num = Number(seat.slice(1));
+  return ROWS.includes(row) && Number.isInteger(num) && num >= 1 && num <= SEATS_PER_ROW;
+}
 
 
 
@@ -47,15 +57,29 @@ const server = http.createServer((req,res)=>{
         res.end(JSON.stringify({ error: "Invalid JSON" }));
         return;
             }
+
+            if(!shows.some((s)=>s.id === data.showId)){
+                res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: "Unknown show" }));
+        return;
+            }
+
+            if (typeof data.seat !== "string" || !isValidSeat(data.seat)) {
+                res.writeHead(400, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "Invalid seat" }));
+                return;
+              }
            
             const booking = { showId: data.showId, seat: data.seat };
-            const taken = bookings.some(
-                (b)=> b.showId===booking.showId && b.seat===booking.seat)
-            if(taken){
-                res.writeHead(409,{ "Content-Type": "application/json" });
-                res.end(JSON.stringify({ error: "Seat is already taken" }));
+            const key = `${booking.showId}-${booking.seat}`;
+            if (takenSeats.has(key)) {
+                res.writeHead(409, { "Content-Type": "application/json" });
+                res.end(JSON.stringify({ error: "Seat already booked" }));
                 return;
-            }
+              }
+        
+              takenSeats.add(key);
+            
             bookings.push(booking);
             res.writeHead(201,{ "Content-Type": "application/json" });
             res.end(JSON.stringify(booking));
