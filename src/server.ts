@@ -49,6 +49,13 @@ const server = http.createServer((req,res)=>{
             }
            
             const booking = { showId: data.showId, seat: data.seat };
+            const taken = bookings.some(
+                (b)=> b.showId===booking.showId && b.seat===booking.seat)
+            if(taken){
+                res.writeHead(409,{ "Content-Type": "application/json" });
+                res.end(JSON.stringify("Seat is already taken"));
+                return;
+            }
             bookings.push(booking);
             res.writeHead(201,{ "Content-Type": "application/json" });
             res.end(JSON.stringify(booking));
